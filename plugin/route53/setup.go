@@ -14,8 +14,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
@@ -28,7 +26,13 @@ func init() { plugin.Register("route53", setup) }
 
 // exposed for testing
 var f = func(credential *credentials.Credentials) route53iface.Route53API {
-	return route53.New(session.Must(session.NewSession(&aws.Config{Credentials: credential})))
+	verbose := true
+	level := aws.LogDebug
+
+	return route53.New(session.Must(session.NewSession(&aws.Config{
+		CredentialsChainVerboseErrors: &verbose,
+		LogLevel:                      &level,
+	})))
 }
 
 func setup(c *caddy.Controller) error {
@@ -115,14 +119,7 @@ func setup(c *caddy.Controller) error {
 			}
 		}
 
-		session, err := session.NewSession(&aws.Config{})
-		if err != nil {
-			return plugin.Error("route53", err)
-		}
-
-		providers = append(providers, &credentials.EnvProvider{}, sharedProvider, &ec2rolecreds.EC2RoleProvider{
-			Client: ec2metadata.New(session),
-		})
+		providers = append(providers, &credentials.EnvProvider{}, sharedProvider)
 		client := f(credentials.NewChainCredentials(providers))
 		ctx := context.Background()
 		h, err := New(ctx, client, keys, refresh)
