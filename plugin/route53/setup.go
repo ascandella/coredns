@@ -27,11 +27,9 @@ func init() { plugin.Register("route53", setup) }
 // exposed for testing
 var f = func(credential *credentials.Credentials) route53iface.Route53API {
 	verbose := true
-	level := aws.LogDebug
 
 	return route53.New(session.Must(session.NewSession(&aws.Config{
 		CredentialsChainVerboseErrors: &verbose,
-		LogLevel:                      &level,
 	})))
 }
 
